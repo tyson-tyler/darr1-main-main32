@@ -198,7 +198,7 @@ const Checkout: React.FC<CheckoutProps> = ({ productList }) => {
                   Select T-shirt Size
                 </h2>
                 <div className="flex gap-3">
-                  {["S", "M", "L", "XL", "XXL"].map((size) => (
+                  {["M", "L", "XL"].map((size) => (
                     <button
                       key={size}
                       type="button"
