@@ -24,10 +24,17 @@ type Product = {
 
 type Address = Record<string, any>;
 
+type Coupon = {
+  code: string;
+  type: "percentage" | "fixed";
+  value: number;
+};
+
 type CheckoutPayload = {
   uid: string;
   products: Product[];
   address: Address;
+  coupon?: Coupon | null;
 };
 
 // ---- Card Checkout ----
@@ -36,6 +43,7 @@ export const createCheckoutAndGetURL = async ({
   uid,
   products,
   address,
+  coupon = null,
 }: CheckoutPayload): Promise<string> => {
   const checkoutId = doc(collection(db, `ids`)).id;
   const ref: DocumentReference = doc(
@@ -43,30 +51,42 @@ export const createCheckoutAndGetURL = async ({
     `users/${uid}/checkout_sessions/${checkoutId}`
   );
 
-  const line_items = products.map((item) => ({
-    price_data: {
-      currency: "inr",
-      product_data: {
-        name: item.product.title,
-        description: item.product.shortDescription ?? "",
-        images: [
-          item.product.featureImageURL ??
-            `https://i.ibb.co/FL0jxNDt/Whats-App-Image-2025-05-16-at-14-02-01-266c60c4.jpg`,
-        ],
-        metadata: {
-          productId: item.id,
+  const line_items = products.map((item) => {
+    let unit_amount = item.product.saleprice ?? 0;
+
+    // Apply coupon per product if needed
+    if (coupon) {
+      if (coupon.type === "percentage") {
+        unit_amount = Math.round(unit_amount * (1 - coupon.value / 100));
+      } else if (coupon.type === "fixed") {
+        unit_amount = Math.max(0, unit_amount - coupon.value);
+      }
+    }
+
+    return {
+      price_data: {
+        currency: "inr",
+        product_data: {
+          name: item.product.title,
+          description: item.product.shortDescription ?? "",
+          images: [
+            item.product.featureImageURL ??
+              `https://i.ibb.co/FL0jxNDt/Whats-App-Image-2025-05-16-at-14-02-01-266c60c4.jpg`,
+          ],
+          metadata: { productId: item.id },
         },
+        unit_amount: unit_amount * 100,
       },
-      unit_amount: (item.product.saleprice ?? 0) * 100,
-    },
-    quantity: item.quantity,
-  }));
+      quantity: item.quantity,
+    };
+  });
 
   await setDoc(ref, {
     id: checkoutId,
     payment_method_types: ["card"],
     mode: "payment",
     line_items,
+    coupon: coupon ?? null,
     metadata: {
       checkoutId,
       uid,
@@ -104,32 +124,44 @@ export const createCheckoutCODAndGetId = async ({
   uid,
   products,
   address,
+  coupon = null,
 }: CheckoutPayload): Promise<string> => {
   const checkoutId = `cod_${doc(collection(db, `ids`)).id}`;
   const ref = doc(db, `users/${uid}/checkout_sessions_cod/${checkoutId}`);
 
-  const line_items = products.map((item) => ({
-    price_data: {
-      currency: "inr",
-      product_data: {
-        name: item.product.title ?? "",
-        description: item.product.shortDescription ?? "",
-        images: [
-          item.product.featureImageURL ??
-            `https://i.ibb.co/FL0jxNDt/Whats-App-Image-2025-05-16-at-14-02-01-266c60c4.jpg`,
-        ],
-        metadata: {
-          productId: item.id,
+  const line_items = products.map((item) => {
+    let unit_amount = item.product.saleprice ?? 0;
+
+    if (coupon) {
+      if (coupon.type === "percentage") {
+        unit_amount = Math.round(unit_amount * (1 - coupon.value / 100));
+      } else if (coupon.type === "fixed") {
+        unit_amount = Math.max(0, unit_amount - coupon.value);
+      }
+    }
+
+    return {
+      price_data: {
+        currency: "inr",
+        product_data: {
+          name: item.product.title ?? "",
+          description: item.product.shortDescription ?? "",
+          images: [
+            item.product.featureImageURL ??
+              `https://i.ibb.co/FL0jxNDt/Whats-App-Image-2025-05-16-at-14-02-01-266c60c4.jpg`,
+          ],
+          metadata: { productId: item.id },
         },
+        unit_amount: unit_amount * 100,
       },
-      unit_amount: (item.product.saleprice ?? 0) * 100,
-    },
-    quantity: item.quantity ?? 1,
-  }));
+      quantity: item.quantity ?? 1,
+    };
+  });
 
   await setDoc(ref, {
     id: checkoutId,
     line_items,
+    coupon: coupon ?? null,
     metadata: {
       checkoutId,
       uid,

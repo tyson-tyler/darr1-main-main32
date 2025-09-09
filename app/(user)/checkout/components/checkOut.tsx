@@ -50,7 +50,7 @@ const fadeIn = {
 const Checkout: React.FC<CheckoutProps> = ({ productList }) => {
   const [paymentMode, setPaymentMode] = useState<"prepaid" | "cod">("prepaid");
   const [isLoading, setIsLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1); // Step 1: Address, 2: Order, 3: Payment
+  const [currentStep, setCurrentStep] = useState(1);
   const [address, setAddress] = useState<Address>({});
   const { user } = useAuth();
   const router = useRouter();
@@ -105,7 +105,10 @@ const Checkout: React.FC<CheckoutProps> = ({ productList }) => {
         setCouponMessage(data.message);
         setCouponDiscount(null);
       } else {
-        setCouponDiscount({ type: data.discountType, value: data.discountValue });
+        setCouponDiscount({
+          type: data.discountType,
+          value: data.discountValue,
+        });
         setCouponMessage(
           `Coupon applied! You got a ${data.discountValue}${
             data.discountType === "percentage" ? "%" : "₹"
@@ -188,22 +191,28 @@ const Checkout: React.FC<CheckoutProps> = ({ productList }) => {
                   className="border border-gray-300 px-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
                 />
               ))}
-              <h2 className="text-sm font-semibold text-gray-700">Select Size</h2>
-              <div className="flex justify-center gap-3">
-                {["M", "L", "XL"].map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => handleAddressChange("orderNote", size)}
-                    className={`px-5 py-2 rounded-xl border text-sm font-medium transition-all ${
-                      address.orderNote === size
-                        ? "bg-black text-white border-black"
-                        : "bg-white text-gray-700 border-gray-300 hover:border-black"
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
+
+              {/* T-Shirt Size Selector */}
+              <div className="mt-2">
+                <h2 className="text-sm font-semibold text-gray-700 mb-1">
+                  Select T-shirt Size
+                </h2>
+                <div className="flex gap-3">
+                  {["S", "M", "L", "XL", "XXL"].map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => handleAddressChange("orderNote", size)}
+                      className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
+                        address.orderNote === size
+                          ? "bg-black text-white border-black"
+                          : "bg-white text-gray-700 border-gray-300 hover:border-black"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <button
@@ -214,7 +223,7 @@ const Checkout: React.FC<CheckoutProps> = ({ productList }) => {
                   }
                   setCurrentStep(2);
                 }}
-                className="bg-black text-white px-4 py-3 rounded-xl text-sm"
+                className="bg-black text-white px-4 py-3 rounded-xl text-sm mt-4"
               >
                 Continue to Order Summary →
               </button>
@@ -349,19 +358,6 @@ const Checkout: React.FC<CheckoutProps> = ({ productList }) => {
                   {mode.label}
                 </button>
               ))}
-            </div>
-
-            <div className="flex gap-2 text-xs text-gray-600 items-center">
-              <CheckSquare2Icon size={14} className="text-blue-500" />
-              <span>
-                I agree to the{" "}
-                <Link
-                  href={"/comman/policy"}
-                  className="text-blue-700 underline cursor-pointer"
-                >
-                  terms & conditions
-                </Link>
-              </span>
             </div>
 
             <div className="flex justify-between">

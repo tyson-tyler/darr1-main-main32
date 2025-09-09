@@ -12,7 +12,7 @@ interface ProductData {
 }
 
 interface PriceData {
-  unit_amount: number;
+  unit_amount: number; // already includes coupon discount
   product_data: ProductData;
 }
 
@@ -25,6 +25,12 @@ interface Checkout {
   line_items: LineItem[];
 }
 
+interface Coupon {
+  code: string;
+  type: "percentage" | "fixed";
+  value: number;
+}
+
 interface Order {
   paymentMode?: string;
   status?: string;
@@ -32,6 +38,7 @@ interface Order {
     toDate: () => Date;
   };
   checkout?: Checkout;
+  coupon?: Coupon | null;
 }
 
 export default function Page() {
@@ -70,12 +77,11 @@ export default function Page() {
       )}
 
       <div className="flex flex-col gap-6">
-        {orders?.map((item: Order, orderIndex: number) => {
+        {orders?.map((order: Order, orderIndex: number) => {
+          // Total amount after coupon is already applied in unit_amount
           const totalAmount =
-            item.checkout?.line_items?.reduce((prev, curr) => {
-              return (
-                prev + (curr.price_data?.unit_amount / 100) * curr.quantity
-              );
+            order.checkout?.line_items?.reduce((prev, curr) => {
+              return prev + (curr.price_data.unit_amount / 100) * curr.quantity;
             }, 0) ?? 0;
 
           return (
@@ -83,44 +89,57 @@ export default function Page() {
               key={`order-${orderIndex}`}
               className="rounded-xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition"
             >
+              {/* Order Header */}
               <div className="flex justify-between flex-wrap gap-2 mb-4">
                 <div className="flex gap-3 flex-wrap items-center">
                   <span className="text-sm font-semibold text-gray-700">
                     Order #{orderIndex + 1}
                   </span>
                   <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-500">
-                    {item.paymentMode}
+                    {order.paymentMode}
                   </span>
                   <span
                     className={`px-2 py-1 text-xs rounded-full ${
-                      item.status === "delivered"
+                      order.status === "delivered"
                         ? "bg-green-100 text-green-600"
                         : "bg-yellow-100 text-yellow-600"
                     }`}
                   >
-                    {item.status ?? "Pending"}
+                    {order.status ?? "Pending"}
                   </span>
                 </div>
-                <span className="text-sm text-green-600 font-medium">
-                  ₹ {totalAmount.toFixed(2)}
-                </span>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm text-green-600 font-medium">
+                    ₹ {totalAmount.toFixed(2)}
+                  </span>
+                  {order.coupon && (
+                    <span className="text-xs text-green-600">
+                      Coupon <b>{order.coupon.code}</b> applied (
+                      {order.coupon.type === "percentage"
+                        ? `${order.coupon.value}%`
+                        : `₹${order.coupon.value}`}
+                      )
+                    </span>
+                  )}
+                </div>
               </div>
 
               <p className="text-xs text-gray-500 mb-3">
-                {item.timestampCreate?.toDate().toLocaleString()}
+                {order.timestampCreate?.toDate().toLocaleString()}
               </p>
 
+              {/* Order Items */}
               <div className="grid gap-4 md:grid-cols-2">
-                {item.checkout?.line_items?.map((product, idx) => (
+                {order.checkout?.line_items?.map((item, idx) => (
                   <div
-                    key={`order-${orderIndex}-product-${idx}`}
+                    key={`order-${orderIndex}-item-${idx}`}
                     className="flex items-center gap-4"
                   >
                     <div className="relative w-14 h-14 rounded-md overflow-hidden bg-gray-100">
-                      {product.price_data?.product_data?.images?.[0] && (
+                      {item.price_data.product_data.images?.[0] && (
                         <Image
-                          src={product.price_data.product_data.images[0]}
-                          alt="Product Image"
+                          src={item.price_data.product_data.images[0]}
+                          alt={item.price_data.product_data.name}
                           fill
                           className="object-cover"
                         />
@@ -128,11 +147,11 @@ export default function Page() {
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm font-medium">
-                        {product.price_data?.product_data?.name}
+                        {item.price_data.product_data.name}
                       </span>
                       <span className="text-xs text-gray-500">
-                        ₹ {(product.price_data?.unit_amount / 100).toFixed(2)} x{" "}
-                        {product.quantity}
+                        ₹ {(item.price_data.unit_amount / 100).toFixed(2)} x{" "}
+                        {item.quantity}
                       </span>
                     </div>
                   </div>

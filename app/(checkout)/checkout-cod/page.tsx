@@ -1,7 +1,8 @@
 import Productnav from "@/app/components/navbar/ProductNav";
 import Footer from "../../../app/components/footer/footer";
-import { admin, adminDB } from "@/lib/firebase_admin";
+import { adminDB } from "@/lib/firebase_admin";
 import Link from "next/link";
+import admin from "firebase-admin";
 
 // Utility: recursively remove undefined fields for Firestore
 const removeUndefinedFields = (obj: any): any => {
